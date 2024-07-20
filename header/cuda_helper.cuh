@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <cassert>
+#include <tuple>
 
 #define HOST_DEVICE_FUNC __host__ __device__
 
@@ -26,4 +27,17 @@ inline cudaError_t checkCuda(cudaError_t result, int n)
         assert(result == cudaSuccess);
     }
     return result;
+}
+
+std::tuple<int, int> setgpuconfig(int warpMultiuple = 16, int blockMultiple = 10)
+{
+  int deviceId;
+  int numberOfSMs;
+
+  cudaGetDevice(&deviceId);
+  cudaDeviceGetAttribute(&numberOfSMs, cudaDevAttrMultiProcessorCount, deviceId);
+
+  int threadspblk = 32 * warpMultiuple;
+  int blocks = numberOfSMs * blockMultiple;
+  return {threadspblk, blocks};
 }
