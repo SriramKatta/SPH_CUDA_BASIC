@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/sanju2204/temp/copyofbostch/build/impl",
+  "command": "/usr/local/cuda-12.5/bin/nvcc -forward-unknown-to-host-compiler -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP -I/home/sanju2204/temp/copyofbostch/header -I/home/sanju2204/temp/copyofbostch/build/_deps/thrust-src/thrust/cmake/../.. -I/home/sanju2204/temp/copyofbostch/build/_deps/thrust-src/dependencies/libcudacxx/include -I/home/sanju2204/temp/copyofbostch/build/_deps/thrust-src/dependencies/cub/cub/cmake/../.. -O3 -DNDEBUG --generate-code=arch=compute_52,code=[compute_52,sm_52]   -Wall --std c++20 -x cu -c /home/sanju2204/temp/copyofbostch/impl/md.cu -o CMakeFiles/SPH.dir/md.cu.o",
+  "file": "/home/sanju2204/temp/copyofbostch/impl/md.cu"
+}
+]
