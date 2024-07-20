@@ -29,6 +29,31 @@ public:
     return m_a * pow(m_rad * m_rad - r * r, 3);
   }
 
+  HOST_DEVICE_FUNC
+  double gradW(const vec3d &r){
+    return gradW(norm(r));
+  }
+
+  HOST_DEVICE_FUNC
+  double gradW(const double& r){
+    if (r > m_rad){
+      return 0.0;
+    }
+    return -m_b * pow(m_rad - r, 2);
+  }
+
+    HOST_DEVICE_FUNC
+  double lapW(const vec3d &r){
+    return lapW(norm(r));
+  }
+
+  HOST_DEVICE_FUNC
+  double lapW(const double& r){
+    if (r > m_rad){
+      return 0.0;
+    }
+    return m_b * (m_rad - r);
+  }
 
 private:
   double m_rad;

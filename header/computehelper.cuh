@@ -4,6 +4,8 @@
 #include "vector_helper.cuh"
 #include "kernel.cuh"
 
+#include <cfloat>
+
 using vec3d = double3;
 using vec3i = int3;
 
@@ -75,7 +77,7 @@ __global__ void updatePressureDensity(Particle *d_particles,
   GRID_STRIDE(index, stride);
   for (int i = index; i < nParticles; i += stride)
   {
-    if (d_particles[i].ghost != false)
+    if (d_particles[i].ghost)
     {
       d_particles[i].density = restDensity;
       d_particles[i].pressure = 0.0;
@@ -102,13 +104,38 @@ __global__ void updatePressureDensity(Particle *d_particles,
           }
           neighborIdx = partDs[neighborIdx];
         })
-
     d_particles[i].density = density;
     d_particles[i].pressure = gasConstant * (density - restDensity);
   }
 }
 
-// CUDA kernel to compute forces
+__device__ vec3d pressureForce(Particle *d_particles, int i, int neighborIdx, double h, kernel *k)
+{
+  vec3d force = make_double3(0.0, 0.0, 0.0);
+  vec3d rij = d_particles[i].pos - d_particles[neighborIdx].pos;
+  double r = norm(rij);
+  if (r <= h)
+  {
+    double pressureTerm = -0.5 * d_particles[neighborIdx].mass * (d_particles[i].pressure + d_particles[neighborIdx].pressure) / d_particles[neighborIdx].density;
+    double pressureGradient = k->gradW(r);
+    force = rij * (pressureTerm * pressureGradient / (r + DBL_EPSILON));
+  }
+  return force;
+}
+
+__device__ vec3d viscForce(Particle *d_particles, int i, int neighborIdx, double visccoeff, double h, kernel *k)
+{
+  vec3d force = make_double3(0.0, 0.0, 0.0);
+  vec3d rij = d_particles[i].pos - d_particles[neighborIdx].pos;
+  double r = norm(rij);
+  if (r <= h)
+  {
+    double viscosityLaplacian = k->lapW(r);
+    force = (d_particles[neighborIdx].vel - d_particles[i].vel) * (visccoeff * viscosityLaplacian * d_particles[neighborIdx].mass / d_particles[neighborIdx].density);
+  }
+  return force;
+}
+
 __global__ void updateAcceleration(Particle *d_particles,
                                    int *d_cellHead,
                                    int *d_cellNext,
@@ -128,67 +155,38 @@ __global__ void updateAcceleration(Particle *d_particles,
   {
     if (d_particles[i].ghost == false)
     {
-      double fx = 0.0;
-      double fy = 0.0;
-      double fz = 0.0;
+      vec3d force = make_double3(0.0, 0.0, 0.0);
 
       vec3i cellIndex = getCellIndex(d_particles[i].pos, cellSize, nCellsPerSide);
 
-      for (int dx = -1; dx <= 1; ++dx)
-      {
-        for (int dy = -1; dy <= 1; ++dy)
-        {
-          for (int dz = -1; dz <= 1; ++dz)
-          {
-            vec3i neighborCellIndex = make_int3((cellIndex.x + dx + nCellsPerSide) % nCellsPerSide,
-                                                (cellIndex.y + dy + nCellsPerSide) % nCellsPerSide,
-                                                (cellIndex.z + dz + nCellsPerSide) % nCellsPerSide);
+      NBD_LOOP(
+          vec3i neighborCellIndex = make_int3((cellIndex.x + ix + nCellsPerSide) % nCellsPerSide,
+                                              (cellIndex.y + iy + nCellsPerSide) % nCellsPerSide,
+                                              (cellIndex.z + iz + nCellsPerSide) % nCellsPerSide);
 
-            int neighborCellId = getCellIndex1D(neighborCellIndex, nCellsPerSide);
-            int neighborIdx = d_cellHead[neighborCellId];
+          int neighborCellId = getCellIndex1D(neighborCellIndex, nCellsPerSide);
+          int neighborIdx = d_cellHead[neighborCellId];
 
-            while (neighborIdx != -1)
+          while (neighborIdx != -1) {
+            if (neighborIdx != i)
             {
-              if (neighborIdx != i)
+              vec3d rij = d_particles[i].pos - d_particles[neighborIdx].pos;
+              double r = norm(rij);
+
+              if (r <= h)
               {
-                double dist_x = d_particles[i].pos.x - d_particles[neighborIdx].pos.x;
-                double dist_y = d_particles[i].pos.y - d_particles[neighborIdx].pos.y;
-                double dist_z = d_particles[i].pos.z - d_particles[neighborIdx].pos.z;
-
-                double r = sqrt(dist_x * dist_x + dist_y * dist_y + dist_z * dist_z);
-
-                if (r <= h)
+                force += pressureForce(d_particles, i, neighborIdx, h, k);
+                // Viscosity force
+                if (d_particles[neighborIdx].ghost == false)
                 {
-                  // Pressure force
-                  double pressureTerm = -0.5 * d_particles[neighborIdx].mass * (d_particles[i].pressure + d_particles[neighborIdx].pressure) / d_particles[neighborIdx].density;
-                  double weightB = h - r;
-                  double pressureGradient = weightA * weightB * weightB;
-                  fx += pressureTerm * pressureGradient * dist_x / (r); // + 0.01 * h * h);
-                  fy += pressureTerm * pressureGradient * dist_y / (r); // + 0.01 * h * h);
-                  fz += pressureTerm * pressureGradient * dist_z / (r); // + 0.01 * h * h);
-
-                  // Viscosity force
-                  if (d_particles[neighborIdx].ghost == false)
-                  {
-                    double viscosityLaplacian = -weightA * weightB;
-                    double viscosityTerm_x = viscosityCoefficient * d_particles[neighborIdx].mass * (d_particles[neighborIdx].vel.x - d_particles[i].vel.x) / d_particles[neighborIdx].density;
-                    double viscosityTerm_y = viscosityCoefficient * d_particles[neighborIdx].mass * (d_particles[neighborIdx].vel.y - d_particles[i].vel.y) / d_particles[neighborIdx].density;
-                    double viscosityTerm_z = viscosityCoefficient * d_particles[neighborIdx].mass * (d_particles[neighborIdx].vel.z - d_particles[i].vel.z) / d_particles[neighborIdx].density;
-                    fx += viscosityTerm_x * viscosityLaplacian;
-                    fy += viscosityTerm_y * viscosityLaplacian;
-                    fz += viscosityTerm_z * viscosityLaplacian;
-                  }
+                  force += viscForce(d_particles, i, neighborIdx, viscosityCoefficient, h, k);
                 }
               }
-              neighborIdx = d_cellNext[neighborIdx];
             }
-          }
-        }
-      }
-
-      d_particles[i].force.x = fx;
-      d_particles[i].force.y = fy - gravity * d_particles[i].density;
-      d_particles[i].force.z = fz;
+            neighborIdx = d_cellNext[neighborIdx];
+          })
+      d_particles[i].acc = force / d_particles[i].density;
+      d_particles[i].acc.y -= gravity;
     }
   }
 }
@@ -201,7 +199,7 @@ __global__ void updateState(Particle *d_particles, double dt, int n)
   {
     if (!d_particles[i].ghost)
     {
-      d_particles[i].vel += d_particles[i].force * (dt / d_particles[i].density);
+      d_particles[i].vel += d_particles[i].acc * dt;
       d_particles[i].pos += d_particles[i].vel * dt;
     }
   }
