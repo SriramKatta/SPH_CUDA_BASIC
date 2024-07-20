@@ -6,5 +6,5 @@ CUDA_DEFINES = -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA -DTHRUST_HOST_SY
 
 CUDA_INCLUDES = -I/home/sanju2204/temp/copyofbostch/header -I/home/sanju2204/temp/copyofbostch/build/_deps/thrust-src/thrust/cmake/../.. -I/home/sanju2204/temp/copyofbostch/build/_deps/thrust-src/dependencies/libcudacxx/include -I/home/sanju2204/temp/copyofbostch/build/_deps/thrust-src/dependencies/cub/cub/cmake/../..
 
-CUDA_FLAGS = -O3 -DNDEBUG --generate-code=arch=compute_52,code=[compute_52,sm_52]   -Wall --std c++20
+CUDA_FLAGS = -g --generate-code=arch=compute_52,code=[compute_52,sm_52]   -Wall --std c++20
 
