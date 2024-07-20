@@ -16,70 +16,19 @@
 #include "thrust/host_vector.h"
 #include "thrust/device_vector.h"
 
-std::string inputFilename;
-int nParticles;
-int nParticlesFluid;
-double dt;
-double boxSize;
-double h;
-int nSteps;
-int vtkOutputFrequency;
-double gravity;
-double particleRadius;
-double restDensity;
-double viscosityCoefficient;
-double gasConstant;
+const std::string inputFilename = "../scenes/scene_2.vtk";
+const int nParticles = 480470;
+const int nParticlesFluid = 65220;
+const double dt = 0.000625;
+const double boxSize = 3.0;
+const double h = 0.045;
+const int nSteps = 8000;
+const int vtkOutputFrequency;
+const double gravity = 9.81;
+const double restDensity = 1000.0;
+const double viscosityCoefficient = 50.0;
+const double gasConstant = 20.0;
 
-
-// function to read configuration file
-void readConfig() {
-    std::string filename = "configuration.config";
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Error opening file: " << filename << std::endl;
-        return;
-    }
-    std::string line;
-    while (std::getline(file, line)) {
-        std::istringstream iss(line);
-        std::string key;
-        if (std::getline(iss, key, '=')) {
-            key.erase(key.find_last_not_of(" \n\r\t") + 1);  // trim right
-            std::string value;
-            if (std::getline(iss, value)) {
-                value.erase(0, value.find_first_not_of(" \n\r\t"));  // trim left
-                if (key == "inputFilename") {
-                    inputFilename = value;
-                    inputFilename.erase(0, 1);
-                    inputFilename.pop_back();
-                    inputFilename.pop_back();
-                } else if (key == "nParticles") {
-                    nParticles = std::stoi(value);
-                } else if (key == "nParticlesFluid") {
-                    nParticlesFluid = std::stoi(value);
-                } else if (key == "dt") {
-                    dt = std::stod(value);
-                } else if (key == "nSteps") {
-                    nSteps = std::stoi(value);
-                } else if (key == "vtkOutputFrequency") {
-                    vtkOutputFrequency = std::stoi(value);
-                } else if (key == "boxSize") {
-                    boxSize = std::stod(value);
-                } else if (key == "h") {
-                    h = std::stod(value);
-                } else if (key == "gravity"){
-                    gravity = std::stod(value);
-                } else if (key == "restDensity"){
-                    restDensity = std::stod(value);
-                } else if (key == "viscosityCoefficient"){
-                    viscosityCoefficient = std::stod(value);
-                } else if (key == "gasConstant"){
-                    gasConstant = std::stod(value);
-                }
-            }
-        }
-    }
-}
 
 // function to read particles data from a VTK file
 void readVTK(const std::string &filename, int numParticles, thrust::host_vector<Particle>& particles) {
@@ -139,8 +88,8 @@ void readVTK(const std::string &filename, int numParticles, thrust::host_vector<
     file >> line >> line >> line;           // SCALARS radius double
     file >> line >> line;                   // LOOKUP_TABLE default
     for (int i = 0; i < numParticles; ++i) {
-        file >> particles[i].fix;
-        //std::cout << "fix " << particles[i].fix << std::endl;
+        file >> particles[i].ghost;
+        //std::cout << "fix " << particles[i].ghost << std::endl;
     }
 
     // close file
@@ -163,7 +112,7 @@ void writeVTK(thrust::host_vector<Particle>& particles, int step, int nParticles
     // points section
     file << "POINTS " << nParticlesFluid << " float\n";
     for (int i = 0; i < nParticles; i++) {
-        if (particles[i].fix == false) {
+        if (particles[i].ghost == false) {
             file << particles[i].pos.x << " " << particles[i].pos.y << " " << particles[i].pos.z << "\n";
         }
     }
@@ -179,7 +128,7 @@ void writeVTK(thrust::host_vector<Particle>& particles, int step, int nParticles
     file << "SCALARS m float\n";
     file << "LOOKUP_TABLE default\n";
     for (int i = 0; i < nParticles; i++) {
-        if (particles[i].fix == false) {
+        if (particles[i].ghost == false) {
             file << particles[i].mass << "\n";
         }
     }
@@ -188,7 +137,7 @@ void writeVTK(thrust::host_vector<Particle>& particles, int step, int nParticles
     file << "SCALARS rho float\n";
     file << "LOOKUP_TABLE default\n";
     for (int i = 0; i < nParticles; i++) {
-        if (particles[i].fix == false) {
+        if (particles[i].ghost == false) {
             file << particles[i].density << "\n";
         }
     }
@@ -197,7 +146,7 @@ void writeVTK(thrust::host_vector<Particle>& particles, int step, int nParticles
     file << "SCALARS r float\n";
     file << "LOOKUP_TABLE default\n";
     for (int i = 0; i < nParticles; i++) {
-        if (particles[i].fix == false) {
+        if (particles[i].ghost == false) {
             file << particles[i].radius << "\n";
         }
     }
@@ -205,7 +154,7 @@ void writeVTK(thrust::host_vector<Particle>& particles, int step, int nParticles
     // positions
     file << "VECTORS p float\n";
     for (int i = 0; i < nParticles; i++) {
-        if (particles[i].fix == false) {
+        if (particles[i].ghost == false) {
             file << particles[i].pos.x << " " << particles[i].pos.y << " " << particles[i].pos.z << "\n";
         }
     }
@@ -213,7 +162,7 @@ void writeVTK(thrust::host_vector<Particle>& particles, int step, int nParticles
     // velocities
     file << "VECTORS v float\n";
     for (int i = 0; i < nParticles; i++) {
-        if (particles[i].fix == false) {
+        if (particles[i].ghost == false) {
             file << particles[i].vel.x << " " << particles[i].vel.y << " " << particles[i].vel.z << "\n";
         }
     }
@@ -225,7 +174,7 @@ void writeVTK(thrust::host_vector<Particle>& particles, int step, int nParticles
 
 int main() {
     // initialize host variables I
-    readConfig();
+    //readConfig();
 
     // allocate host memory
     thrust::host_vector<Particle> particles(nParticles);
@@ -252,9 +201,10 @@ int main() {
     //checkCuda(cudaMemcpy(d_particles, particles, nParticles * sizeof(Particle), cudaMemcpyHostToDevice), 11);
 
     // block-thread-partitioning
-    int threadsPerBlock = 256;
-    int blocksPerGridParticles = (nParticles + threadsPerBlock - 1) / threadsPerBlock;
-    int blocksPerGridCells = (nCells + threadsPerBlock - 1) / threadsPerBlock;
+    //int threadsPerBlock = 256;
+    //int blocksPerGridParticles = (nParticles + threadsPerBlock - 1) / threadsPerBlock;
+    //int blocksPerGridCells = (nCells + threadsPerBlock - 1) / threadsPerBlock;
+    auto [threadsPerBlock, blocksPerGridParticles] = setgpuconfig();
 
     // time start point
     auto start = std::chrono::steady_clock::now();
@@ -262,7 +212,7 @@ int main() {
     // simulation step loop
     for (int step = 0; step < nSteps; ++step) {
         // initialize cells on device
-        initializeCellHeadKernel<<<blocksPerGridCells, threadsPerBlock>>>(d_cellHead, nCells);
+        initializeCellHeadKernel<<<blocksPerGridParticles, threadsPerBlock>>>(d_cellHead, nCells);
         initializeCellNextKernel<<<blocksPerGridParticles, threadsPerBlock>>>(d_cellNext, nParticles);
         checkCuda(cudaGetLastError(), 1);
 
