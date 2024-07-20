@@ -16,17 +16,17 @@ public:
     m_b = 45.0 / (M_PI * pow(rad, 6));
   }
 
+  HOST_DEVICE_FUNC
   double W(const vec3d &r){
     return W(norm(r));
   }
 
-  double W(double r){
-    if (r < m_rad){
-      return m_a * pow(m_rad * m_rad - r * r, 3);
-    }
-    else{
+  HOST_DEVICE_FUNC
+  double W(const double& r){
+    if (r > m_rad){
       return 0.0;
     }
+    return m_a * pow(m_rad * m_rad - r * r, 3);
   }
 
 
