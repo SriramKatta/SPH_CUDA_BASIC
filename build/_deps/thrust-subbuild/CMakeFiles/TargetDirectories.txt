@@ -1,3 +1,0 @@
-/home/sanju2204/temp/copyofbostch/build/_deps/thrust-subbuild/CMakeFiles/thrust-populate.dir
-/home/sanju2204/temp/copyofbostch/build/_deps/thrust-subbuild/CMakeFiles/edit_cache.dir
-/home/sanju2204/temp/copyofbostch/build/_deps/thrust-subbuild/CMakeFiles/rebuild_cache.dir
