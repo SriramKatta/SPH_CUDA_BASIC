@@ -8,7 +8,7 @@ thrust::host_vector<Particle> sceneInit(const double &boxSize, const double& dom
   thrust::host_vector<Particle> particles;
 
   // place particles on box
-  const int resolutionbdy = boxSize / h * 3;
+  const int resolutionbdy = boxSize / h * 16;
   particles.reserve(6 * (resolutionbdy - 1) * (resolutionbdy -1));
 
   for (int iz = 1; iz < resolutionbdy; ++iz){
@@ -63,8 +63,7 @@ thrust::host_vector<Particle> sceneInit(const double &boxSize, const double& dom
   int numghostparticles = particles.size();
 
   double domsize = domend - domstart;
-  int resdom = domsize / h * 4;
-
+  int resdom = domsize / h * 2;
   for(int ix = 0; ix < resdom; ++ix)
   for(int iy = 0; iy < resdom; ++iy)
   for(int iz = 0; iz < resdom; ++iz){
