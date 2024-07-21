@@ -23,6 +23,8 @@ const double gasConstant = 20.0;
 
 int main()
 {
+    auto [thPerBlk, blks] = setgpuconfig();
+
     kernel k(h);
     kernel *d_k;
     cudaMalloc(&d_k, sizeof(kernel));
@@ -42,8 +44,6 @@ int main()
     Particle *d_particles = thrust::raw_pointer_cast(d_particles_vec.data());
     int *d_cell_ptr = thrust::raw_pointer_cast(CellDS_vec.data());
     int *d_part_ptr = thrust::raw_pointer_cast(PartDS_vec.data());
-
-    auto [thPerBlk, blks] = setgpuconfig();
 
     for (int step = 0; step < nSteps; ++step)
     {
