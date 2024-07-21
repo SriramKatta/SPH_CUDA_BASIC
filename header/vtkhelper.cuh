@@ -59,15 +59,7 @@ void readVTK(const std::string &filename, int numParticles, thrust::host_vector<
         file >> particles[i].vel.x >> particles[i].vel.y >> particles[i].vel.z;
     }
 
-
-    file >> line >> line >> line; // SCALARS radius double
-    file >> line >> line;         // LOOKUP_TABLE default
-    for (int i = 0; i < numParticles; ++i)
-    {
-        file >> line;
-    }
-
-    file >> line >> line >> line; // SCALARS radius double
+    file >> line >> line >> line; // SCALARS ghost double
     file >> line >> line;         // LOOKUP_TABLE default
     for (int i = 0; i < numParticles; ++i)
     {

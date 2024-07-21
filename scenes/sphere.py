@@ -9,9 +9,9 @@ def initialize_script_environment():
 def create_particle(x, y, z, mass=500.0, ghost=0):
     """Create a single particle with specified parameters."""
     return {
-        'x': round(x, 4),
-        'y': round(y, 4),
-        'z': round(z, 4),
+        'x': round(x, 2),
+        'y': round(y, 2),
+        'z': round(z, 2),
         'vx': 0.0,
         'vy': 0.0,
         'vz': 0.0,
