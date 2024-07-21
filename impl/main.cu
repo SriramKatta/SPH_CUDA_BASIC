@@ -6,6 +6,7 @@
 #include "thrust/device_vector.h"
 #include "kernel.cuh"
 #include "vtkhelper.cuh"
+#include "scene.cuh"
 
 const std::string inputFilename = "../scenes/scene_2.vtk";
 const int nParticles = 480470;
