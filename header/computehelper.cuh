@@ -9,6 +9,14 @@
 using vec3d = double3;
 using vec3i = int3;
 
+__global__ void setMass(Particle *d_particles, double mass, int N)
+{
+  GRID_STRIDE(index, stride);
+  for (int i = index; i < N; i += stride)
+  {
+    d_particles[i].mass = mass;
+  }
+}
 
 __device__ vec3i getCellIndex(const vec3d &pos, const double &cellSize, const int &nXYZCells)
 {

@@ -19,6 +19,7 @@ const double gravity = 9.81;
 const double restDensity = 1000.0;
 const double viscosityCoefficient = 50.0;
 const double gasConstant = 20.0;
+const double mass = 0.012;
 
 
 int main()
@@ -44,6 +45,8 @@ int main()
     Particle *d_particles = thrust::raw_pointer_cast(d_particles_vec.data());
     int *d_cell_ptr = thrust::raw_pointer_cast(CellDS_vec.data());
     int *d_part_ptr = thrust::raw_pointer_cast(PartDS_vec.data());
+
+    setMass<<<blks, thPerBlk>>>(d_particles, mass, nParticles);
 
     for (int step = 0; step < nSteps; ++step)
     {
