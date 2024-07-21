@@ -8,12 +8,11 @@
 #include "vtkhelper.cuh"
 #include "scene.cuh"
 
-//const std::string inputFilename = "../scenes/scene_2.vtk";
 const double dt = 0.000625;
 const double boxSize = 3.0;
 const double h = 0.065;
 const int nSteps = 8000;
-const int vtkOutputFrequency = 100;
+const int vtkOutputFrequency = 20;
 const double gravity = 9.81;
 const double restDensity = 1000.0;
 const double viscosityCoefficient = 50.0;
@@ -38,9 +37,6 @@ int main()
     thrust::host_vector<Particle> particles = sceneInit(boxSize, 1.5, 2.5 ,h, nParticlesFluid);
     nParticles = particles.size();
 
-    //writeVTK(particles, 0, nParticlesFluid);
-
-    //readVTK(inputFilename, nParticles, particles);
     int nCellsPerSide = static_cast<int>(boxSize / h);
     int nCells = nCellsPerSide * nCellsPerSide * nCellsPerSide;
     double cellSize = boxSize / nCellsPerSide;

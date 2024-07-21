@@ -63,7 +63,7 @@ thrust::host_vector<Particle> sceneInit(const double &boxSize, const double& dom
   int numghostparticles = particles.size();
 
   double domsize = domend - domstart;
-  int resdom = domsize / h * 2;
+  int resdom = domsize / h * 5;
   for(int ix = 0; ix < resdom; ++ix)
   for(int iy = 0; iy < resdom; ++iy)
   for(int iz = 0; iz < resdom; ++iz){
