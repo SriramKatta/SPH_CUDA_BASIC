@@ -13,3 +13,4 @@ executable
 .vscode
 build*
 output*
+!build_run.sh
