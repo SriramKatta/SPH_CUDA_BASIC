@@ -46,8 +46,8 @@ int main()
     int *d_cell_ptr = thrust::raw_pointer_cast(CellDS_vec.data());
     int *d_part_ptr = thrust::raw_pointer_cast(PartDS_vec.data());
 
-    setMass<<<blks, thPerBlk>>>(d_particles, mass, nParticles);
 
+    setMass<<<blks, thPerBlk>>>(d_particles, mass, nParticles);
     for (int step = 0; step < nSteps; ++step)
     {
         setDS<<<blks, thPerBlk>>>(d_cell_ptr, nCells);
