@@ -7,9 +7,9 @@
 #include "kernel.cuh"
 #include "vtkhelper.cuh"
 
-const std::string inputFilename = "../scenes/scene_2.vtk";
-const int nParticles = 480470;
-const int nParticlesFluid = 65220;
+const std::string inputFilename = "../scenes/sph_scene_setup.vtk";
+const int nParticles = 17938;
+const int nParticlesFluid = 2800;
 const double dt = 0.000625;
 const double boxSize = 3.0;
 const double h = 0.065;
