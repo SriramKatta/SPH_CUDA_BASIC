@@ -125,7 +125,7 @@ def main():
     x_range = (1, 29)
     y_range = (1, 29)
     z_range = (1, 29)
-    boundary_spacing = 1  # Adjust spacing for particle density
+    boundary_spacing = 0.06  # Adjust spacing for particle density
     
     # Generate fluid particles for the sphere
     fluid_particles = generate_sphere_particles(sphere_center, sphere_radius, sphere_spacing)
@@ -133,7 +133,7 @@ def main():
     print(f"Number of fluid particles: {num_fluid_particles}")
     
     # Generate boundary particles for the cuboid
-    boundary_particles = generate_boundary_particles(x_range, y_range, z_range, boundary_spacing, num_layers=3)
+    boundary_particles = generate_boundary_particles(x_range, y_range, z_range, boundary_spacing, num_layers=1)
     num_boundary_particles = len(boundary_particles)
     
     # Combine all particles
