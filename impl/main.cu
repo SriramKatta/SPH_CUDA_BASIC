@@ -8,9 +8,7 @@
 #include "vtkhelper.cuh"
 #include "scene.cuh"
 
-const std::string inputFilename = "../scenes/scene_2.vtk";
-const int nParticles = 480470;
-const int nParticlesFluid = 65220;
+//const std::string inputFilename = "../scenes/scene_2.vtk";
 const double dt = 0.000625;
 const double boxSize = 3.0;
 const double h = 0.065;
@@ -32,10 +30,17 @@ int main()
     cudaMalloc(&d_k, sizeof(kernel));
     cudaMemcpy(d_k, &k, sizeof(kernel), cudaMemcpyHostToDevice);
 
-    // allocate host memory
-    thrust::host_vector<Particle> particles(nParticles);
+    int nParticles = 0;
+    int nParticlesFluid = 0;
 
-    readVTK(inputFilename, nParticles, particles);
+
+    // allocate host memory
+    thrust::host_vector<Particle> particles = sceneInit(boxSize, 1.5, 2.5 ,h, nParticlesFluid);
+    nParticles = particles.size();
+
+    //writeVTK(particles, 0, nParticlesFluid);
+
+    //readVTK(inputFilename, nParticles, particles);
     int nCellsPerSide = static_cast<int>(boxSize / h);
     int nCells = nCellsPerSide * nCellsPerSide * nCellsPerSide;
     double cellSize = boxSize / nCellsPerSide;

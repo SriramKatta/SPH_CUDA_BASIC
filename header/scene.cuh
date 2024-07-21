@@ -62,14 +62,21 @@ thrust::host_vector<Particle> sceneInit(const double &boxSize, const double& dom
 
   int numghostparticles = particles.size();
 
-  int resdom = 50;
+  double domsize = domend - domstart;
+  int resdom = domsize / h * 4;
 
   for(int ix = 0; ix < resdom; ++ix)
   for(int iy = 0; iy < resdom; ++iy)
   for(int iz = 0; iz < resdom; ++iz){
-    
+    Particle p;
+    p.ghost = false;
+    const double xpos = domstart + domsize * static_cast<double>(ix)/resdom;
+    const double ypos = domstart + domsize * static_cast<double>(iy)/resdom;
+    const double zpos = domstart + domsize * static_cast<double>(iz)/resdom;
+    p.pos = make_double3(xpos, ypos, zpos);
+    particles.push_back(p);
   }
 
-  nDompart = particles.size();
+  nDompart = particles.size() - numghostparticles;
   return particles;
 }
