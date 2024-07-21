@@ -47,9 +47,9 @@ int main()
 
     for (int step = 0; step < nSteps; ++step)
     {
-        setCellDS<<<blks, thPerBlk>>>(d_cell_ptr, nCells);
+        setDS<<<blks, thPerBlk>>>(d_cell_ptr, nCells);
         checkCuda(cudaGetLastError(), __LINE__ - 1);
-        setPartDS<<<blks, thPerBlk>>>(d_part_ptr, nParticles);
+        setDS<<<blks, thPerBlk>>>(d_part_ptr, nParticles);
         checkCuda(cudaGetLastError(), __LINE__ - 1);
 
         updateDS<<<blks, thPerBlk>>>(d_particles, d_cell_ptr, d_part_ptr, cellSize, nCellsPerSide, nParticles);

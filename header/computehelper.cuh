@@ -25,25 +25,15 @@ __device__ int getCellIndex1D(const vec3i &cellIndex, int nCellsPerSide)
   ;
 }
 
-// CUDA kernel to initialize cellHead
-__global__ void setCellDS(int *CellDS, int nCells)
+__global__ void setDS(int *DS, int N)
 {
   GRID_STRIDE(index, stride);
-  for (int i = index; i < nCells; i += stride)
+  for (int i = index; i < N; i += stride)
   {
-    CellDS[i] = -1;
+    DS[i] = -1;
   }
 }
 
-// CUDA kernel to initialize cellNext
-__global__ void setPartDS(int *partDs, int nParticles)
-{
-  GRID_STRIDE(index, stride);
-  for (int i = index; i < nParticles; i += stride)
-  {
-    partDs[i] = -1;
-  }
-}
 
 // CUDA kernel to build linked lists
 __global__ void updateDS(Particle *d_particles,
