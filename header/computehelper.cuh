@@ -9,20 +9,19 @@
 using vec3d = double3;
 using vec3i = int3;
 
-// function to get cell index in x,y,z
-__device__ vec3i getCellIndex(const vec3d &pos, const double &cellSize, const int &nCellsPerSide)
+
+__device__ vec3i getCellIndex(const vec3d &pos, const double &cellSize, const int &nXYZCells)
 {
   vec3i cellIndex = make_int3(
-      static_cast<int>(pos.x / cellSize + nCellsPerSide) % nCellsPerSide,
-      static_cast<int>(pos.y / cellSize + nCellsPerSide) % nCellsPerSide,
-      static_cast<int>(pos.z / cellSize + nCellsPerSide) % nCellsPerSide);
+      static_cast<int>(pos.x / cellSize + nXYZCells) % nXYZCells,
+      static_cast<int>(pos.y / cellSize + nXYZCells) % nXYZCells,
+      static_cast<int>(pos.z / cellSize + nXYZCells) % nXYZCells);
   return cellIndex;
 }
 
-__device__ int getCellIndex1D(const vec3i &cellIndex, int nCellsPerSide)
+__device__ int getCellIndex1D(const vec3i &cellIndex, int nXYZCells)
 {
-  return cellIndex.x * nCellsPerSide * nCellsPerSide + cellIndex.y * nCellsPerSide + cellIndex.z;
-  ;
+  return cellIndex.x * nXYZCells * nXYZCells + cellIndex.y * nXYZCells + cellIndex.z;
 }
 
 __global__ void setDS(int *DS, int N)
@@ -35,19 +34,18 @@ __global__ void setDS(int *DS, int N)
 }
 
 
-// CUDA kernel to build linked lists
 __global__ void updateDS(Particle *d_particles,
                          int *CellDs,
                          int *PartDS,
                          double cellSize,
-                         int nCellsPerSide,
-                         int nParticles)
+                         int nXYZCells,
+                         int Npart)
 {
-  GRID_STRIDE(index, stride);
-  for (int i = index; i < nParticles; i += stride)
+  GRID_STRIDE(start, stride);
+  for (int i = start; i < Npart; i += stride)
   {
-    vec3i cellIndex = getCellIndex(d_particles[i].pos, cellSize, nCellsPerSide);
-    int cellId = getCellIndex1D(cellIndex, nCellsPerSide);
+    vec3i cellIndex = getCellIndex(d_particles[i].pos, cellSize, nXYZCells);
+    int cellId = getCellIndex1D(cellIndex, nXYZCells);
     PartDS[i] = atomicExch(&CellDs[cellId], i);
   }
 }
@@ -56,16 +54,16 @@ __global__ void updatePressureDensity(Particle *d_particles,
                                       int *CellDs,
                                       int *partDs,
                                       double cellSize,
-                                      int nCellsPerSide,
-                                      int nParticles,
+                                      int nXYZCells,
+                                      int Npart,
                                       double h,
                                       double restDensity,
                                       double gasConstant,
                                       kernel *k)
 {
 
-  GRID_STRIDE(index, stride);
-  for (int i = index; i < nParticles; i += stride)
+  GRID_STRIDE(start, stride);
+  for (int i = start; i < Npart; i += stride)
   {
     if (d_particles[i].ghost)
     {
@@ -75,14 +73,14 @@ __global__ void updatePressureDensity(Particle *d_particles,
     }
 
     double density = 0;
-    vec3i cellIndex = getCellIndex(d_particles[i].pos, cellSize, nCellsPerSide);
+    vec3i cellIndex = getCellIndex(d_particles[i].pos, cellSize, nXYZCells);
 
     NBD_LOOP(
-        int3 neighborCellIndex = make_int3((cellIndex.x + ix + nCellsPerSide) % nCellsPerSide,
-                                           (cellIndex.y + iy + nCellsPerSide) % nCellsPerSide,
-                                           (cellIndex.z + iz + nCellsPerSide) % nCellsPerSide);
+        vec3i neighborCellIndex = make_int3((cellIndex.x + ix + nXYZCells) % nXYZCells,
+                                           (cellIndex.y + iy + nXYZCells) % nXYZCells,
+                                           (cellIndex.z + iz + nXYZCells) % nXYZCells);
 
-        int neighborCellId = getCellIndex1D(neighborCellIndex, nCellsPerSide);
+        int neighborCellId = getCellIndex1D(neighborCellIndex, nXYZCells);
 
         int neighborIdx = CellDs[neighborCellId];
         while (neighborIdx != -1) {
@@ -104,7 +102,7 @@ __device__ vec3d pressureForce(Particle *d_particles, int i, int neighborIdx, do
   vec3d force = make_double3(0.0, 0.0, 0.0);
   vec3d rij = d_particles[i].pos - d_particles[neighborIdx].pos;
   double r = norm(rij);
-  if (r <= h)
+  if (r <= h && r > 0.0)
   {
     double pressureTerm = -0.5 * d_particles[neighborIdx].mass * (d_particles[i].pressure + d_particles[neighborIdx].pressure) / d_particles[neighborIdx].density;
     double pressureGradient = k->gradW(r);
@@ -130,31 +128,30 @@ __global__ void updateAcceleration(Particle *d_particles,
                                    int *d_cellHead,
                                    int *d_cellNext,
                                    double cellSize,
-                                   int nCellsPerSide,
+                                   int nXYZCells,
                                    double h,
-                                   int nParticles,
-                                   double viscosityCoefficient,
+                                   int Npart,
+                                   double visccoeff,
                                    double gravity,
                                    kernel *k)
 {
-  double weightA = -45.0 / (M_PI * pow(h, 6));
 
-  GRID_STRIDE(index, stride);
+  GRID_STRIDE(start, stride);
 
-  for (int i = index; i < nParticles; i += stride)
+  for (int i = start; i < Npart; i += stride)
   {
-    if (d_particles[i].ghost == false)
+    if (!d_particles[i].ghost)
     {
       vec3d force = make_double3(0.0, 0.0, 0.0);
 
-      vec3i cellIndex = getCellIndex(d_particles[i].pos, cellSize, nCellsPerSide);
+      vec3i cellIndex = getCellIndex(d_particles[i].pos, cellSize, nXYZCells);
 
       NBD_LOOP(
-          vec3i neighborCellIndex = make_int3((cellIndex.x + ix + nCellsPerSide) % nCellsPerSide,
-                                              (cellIndex.y + iy + nCellsPerSide) % nCellsPerSide,
-                                              (cellIndex.z + iz + nCellsPerSide) % nCellsPerSide);
+          vec3i neighborCellIndex = make_int3((cellIndex.x + ix + nXYZCells) % nXYZCells,
+                                              (cellIndex.y + iy + nXYZCells) % nXYZCells,
+                                              (cellIndex.z + iz + nXYZCells) % nXYZCells);
 
-          int neighborCellId = getCellIndex1D(neighborCellIndex, nCellsPerSide);
+          int neighborCellId = getCellIndex1D(neighborCellIndex, nXYZCells);
           int neighborIdx = d_cellHead[neighborCellId];
 
           while (neighborIdx != -1) {
@@ -167,9 +164,9 @@ __global__ void updateAcceleration(Particle *d_particles,
               {
                 force += pressureForce(d_particles, i, neighborIdx, h, k);
                 // Viscosity force
-                if (d_particles[neighborIdx].ghost == false)
+                if (!d_particles[neighborIdx].ghost)
                 {
-                  force += viscForce(d_particles, i, neighborIdx, viscosityCoefficient, h, k);
+                  force += viscForce(d_particles, i, neighborIdx, visccoeff, h, k);
                 }
               }
             }
@@ -181,11 +178,10 @@ __global__ void updateAcceleration(Particle *d_particles,
   }
 }
 
-// CUDA kernel for velocity integration
-__global__ void updateState(Particle *d_particles, double dt, int n)
+__global__ void updateState(Particle *d_particles, double dt, int Npart)
 {
-  GRID_STRIDE(index, stride);
-  for (int i = index; i < n; i += stride)
+  GRID_STRIDE(start, stride);
+  for (int i = start; i < Npart; i += stride)
   {
     if (!d_particles[i].ghost)
     {
